@@ -67,13 +67,13 @@ npm start
 npm run dev
 ```
 
-The server will be available at `http://localhost:3000`
+The server will be available at `http://localhost:4000`
 
 ### 4. Verify Installation
 
 ```bash
 # Check if the server is running
-curl http://localhost:3000/isbusy
+curl http://localhost:4000/isbusy
 
 # Run linting
 npm run lint
@@ -109,7 +109,7 @@ npm run lint
 npm test
 
 # Test the API endpoints
-curl -X POST http://localhost:3000/google/join \
+curl -X POST http://localhost:4000/google/join \
   -H "Content-Type: application/json" \
   -d '{"bearerToken":"test","url":"https://meet.google.com/test","name":"Test Bot","teamId":"test","timezone":"UTC","userId":"test"}'
 ```

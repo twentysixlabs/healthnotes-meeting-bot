@@ -272,7 +272,7 @@ To test the graceful shutdown mechanism:
 
 ```bash
 # Test with a long-running task
-curl -X POST http://localhost:3000/google/join -d '{"duration": 120}'
+curl -X POST http://localhost:4000/google/join -d '{"duration": 120}'
 
 # In another terminal, send shutdown signal
 kill -TERM <application_pid>

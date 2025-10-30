@@ -85,7 +85,7 @@ export class ZoomBot extends BotBase {
     // Accept cookies
     try {
       this._logger.info('Waiting for the "Accept Cookies" button...');
-      await this.page.waitForTimeout(3000);
+      await this.page.waitForTimeout(4000);
       const acceptCookies = await this.page.locator('button', { hasText: 'Accept Cookies' });
       await acceptCookies.waitFor({ timeout: 5000 });
 
@@ -284,7 +284,7 @@ export class ZoomBot extends BotBase {
     this._logger.info('Filling the input field with the name...');
     await iframe.fill('input[type="text"]', name ? name : 'ScreenApp Notetaker');
 
-    await this.page.waitForTimeout(3000);
+    await this.page.waitForTimeout(4000);
 
     this._logger.info('Clicking the "Join" button...');
     const joinButton = await iframe.locator('button', { hasText: 'Join' });

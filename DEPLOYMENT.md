@@ -79,7 +79,7 @@ docker pull ghcr.io/screenappai/meeting-bot:latest
 ```bash
 docker run -d \
   --name meeting-bot \
-  -p 3000:3000 \
+  -p 4000:4000 \
   -e MAX_RECORDING_DURATION_MINUTES=60 \
   -e NODE_ENV=production \
   -e GCP_DEFAULT_REGION=your-region \
@@ -95,7 +95,7 @@ Required environment variables:
 
 Optional environment variables:
 - `MAX_RECORDING_DURATION_MINUTES`: Maximum recording duration (default: 180)
-- `PORT`: Server port (default: 3000)
+- `PORT`: Server port (default: 4000)
 - `NODE_ENV`: Environment mode (default: production)
 
 ### Docker Compose Example
@@ -106,7 +106,7 @@ services:
   meeting-bot:
     image: ghcr.io/screenappai/meeting-bot:latest
     ports:
-      - "3000:3000"
+      - "4000:4000"
     environment:
       - NODE_ENV=production
       - GCP_DEFAULT_REGION=us-central1
@@ -114,7 +114,7 @@ services:
       - MAX_RECORDING_DURATION_MINUTES=60
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -148,7 +148,7 @@ docker pull ghcr.io/screenappai/meeting-bot:sha-abc123
 The application provides a health check endpoint:
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:4000/health
 ```
 
 Response:
@@ -166,7 +166,7 @@ The production Docker image includes a built-in health check:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+  CMD node -e "require('http').get('http://localhost:4000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 ```
 
 ### Monitoring Endpoints
@@ -209,7 +209,7 @@ docker logs meeting-bot
 docker inspect meeting-bot | grep Health -A 10
 
 # Test health endpoint
-curl -v http://localhost:3000/health
+curl -v http://localhost:4000/health
 
 # Check container status
 docker ps -a

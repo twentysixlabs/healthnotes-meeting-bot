@@ -6,7 +6,7 @@ services:
     environment:
       - NODE_ENV=development
     ports:
-      - "3000:3000"
+      - "4000:4000"
     volumes:
       - .:/usr/src/app
       - ./assets/screenshots:/usr/src/app/assets/screenshots
