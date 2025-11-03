@@ -8,7 +8,7 @@ import { getRecordingNamePrefix } from '../util/recordingName';
 import { encodeFileNameSafebase64 } from '../util/strings';
 import { MeetingJoinParams } from './common';
 import { globalJobStore } from '../lib/globalJobStore';
-import { updateSessionMeetingBot } from '../services/convexService';
+import { notifyMeetingJoined } from '../services/webhookService';
 
 const router = express.Router();
 
@@ -21,7 +21,8 @@ const joinZoom = async (req: Request, res: Response) => {
     timezone,
     userId,
     eventId,
-    botId
+    botId,
+    webhookUrl
   }: MeetingJoinParams = req.body;
 
   // Validate required fields
@@ -65,22 +66,28 @@ const joinZoom = async (req: Request, res: Response) => {
 
       // Create and join the meeting
       const bot = new ZoomBot(logger, correlationId);
-      await bot.join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader });
+      await bot.join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, webhookUrl });
       
       logger.info('Joined Zoom meeting successfully.', userId, teamId);
 
-      // Update session meeting bot status via Convex
-      if (botId) {
+      // Notify webhook of successful meeting join
+      if (botId && webhookUrl) {
         try {
-          await updateSessionMeetingBot({
-            status: 'joined',
+          await notifyMeetingJoined(webhookUrl, {
+            sessionMeetingBotId: botId,
+            correlationId,
             botId,
             eventId,
+            provider: 'zoom',
           }, logger);
         } catch (error) {
-          logger.warn('Failed to update session meeting bot, but meeting join was successful', {
+          logger.warn('Failed to notify webhook of meeting join, but meeting join was successful', {
+            webhookUrl,
+            sessionMeetingBotId: botId,
+            correlationId,
             botId,
             eventId,
+            provider: 'zoom',
             error: error instanceof Error ? error.message : String(error),
           });
         }

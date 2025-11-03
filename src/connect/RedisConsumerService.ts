@@ -10,7 +10,7 @@ import { JoinParams } from '../bots/AbstractMeetBot';
 import { MicrosoftTeamsBot } from '../bots/MicrosoftTeamsBot';
 import { ZoomBot } from '../bots/ZoomBot';
 import config from '../config';
-import { updateSessionMeetingBot } from '../services/convexService';
+import { notifyMeetingJoined } from '../services/webhookService';
 
 export class RedisConsumerService {
   private _isRunning: boolean = false;
@@ -156,7 +156,8 @@ export class RedisConsumerService {
           userId: meetingParams.userId,
           eventId: meetingParams.eventId,
           botId: meetingParams.botId,
-          uploader
+          uploader,
+          webhookUrl: meetingParams.webhookUrl
         };
         
         switch (meetingParams.provider) {
@@ -179,18 +180,24 @@ export class RedisConsumerService {
             throw new Error(`Unsupported provider: ${meetingParams.provider}`);
         }
 
-        // Update session meeting bot status via Convex
-        if (meetingParams.botId) {
+        // Notify webhook of successful meeting join
+        if (meetingParams.botId && meetingParams.webhookUrl) {
           try {
-            await updateSessionMeetingBot({
-              status: 'joined',
+            await notifyMeetingJoined(meetingParams.webhookUrl, {
+              sessionMeetingBotId: meetingParams.botId,
+              correlationId,
               botId: meetingParams.botId,
               eventId: meetingParams.eventId,
+              provider: meetingParams.provider,
             }, logger);
           } catch (error) {
-            logger.warn('Failed to update session meeting bot, but meeting join was successful', {
+            logger.warn('Failed to notify webhook of meeting join, but meeting join was successful', {
+              webhookUrl: meetingParams.webhookUrl,
+              sessionMeetingBotId: meetingParams.botId,
+              correlationId,
               botId: meetingParams.botId,
               eventId: meetingParams.eventId,
+              provider: meetingParams.provider,
               error: error instanceof Error ? error.message : String(error),
             });
           }

@@ -24,8 +24,15 @@ export class MicrosoftTeamsBot extends MeetBotBase {
     this._logger = logger;
     this._correlationId = correlationId;
   }
-  async join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader }: JoinParams): Promise<void> {
+  async join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, webhookUrl }: JoinParams): Promise<void> {
     const _state: BotStatus[] = ['processing'];
+
+    // Set webhook properties on uploader
+    if (webhookUrl) {
+      uploader.setWebhookUrl(webhookUrl);
+      uploader.setProvider('microsoft');
+      uploader.setEventId(eventId);
+    }
 
     const handleUpload = async () => {
       this._logger.info('Begin recording upload to server', { userId, teamId });
