@@ -73,8 +73,8 @@ export class GoogleMeetBot extends MeetBotBase {
     this._logger.info('Navigating to Google Meet URL...');
     await this.page.goto(url, { waitUntil: 'networkidle' });
 
-    this._logger.info('Waiting for 10 seconds...');
-    await this.page.waitForTimeout(10000);
+    // this._logger.info('Waiting for 10 seconds...');
+    // await this.page.waitForTimeout(10000);
 
     const dismissDeviceCheck = async () => {
       try {
@@ -146,14 +146,14 @@ export class GoogleMeetBot extends MeetBotBase {
       }
     );
     
-    this._logger.info('Waiting for 10 seconds...');
-    await this.page.waitForTimeout(10000);
+    // this._logger.info('Waiting for 10 seconds...');
+    // await this.page.waitForTimeout(10000);
 
     this._logger.info('Filling the input field with the name...');
     await this.page.fill('input[type="text"][aria-label="Your name"]', name ? name : 'ScreenApp Notetaker');
 
-    this._logger.info('Waiting for 10 seconds...');
-    await this.page.waitForTimeout(10000);
+    // this._logger.info('Waiting for 10 seconds...');
+    // await this.page.waitForTimeout(10000);
     
     await retryActionWithWait(
       'Clicking the "Ask to join" button',
