@@ -37,8 +37,15 @@ export class ZoomBot extends BotBase {
 
   // TODO use base class for shared functions such as bot status and bot logging
   // TODO Lift the JoinParams to the constructor argument
-  async join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader }: JoinParams): Promise<void> {
+  async join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, webhookUrl }: JoinParams): Promise<void> {
     const _state: BotStatus[] = ['processing'];
+
+    // Set webhook properties on uploader
+    if (webhookUrl) {
+      uploader.setWebhookUrl(webhookUrl);
+      uploader.setProvider('zoom');
+      uploader.setEventId(eventId);
+    }
 
     const handleUpload = async () => {
       this._logger.info('Begin recording upload to server', { userId, teamId });
