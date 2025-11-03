@@ -112,7 +112,8 @@ export class RedisConsumerService {
       userId: meetingParams.userId,
       botId: meetingParams.botId,
       eventId: meetingParams.eventId,
-      url: meetingParams.url
+      url: meetingParams.url,
+      webhookUrl: meetingParams.webhookUrl
     });
     const logger = loggerFactory(correlationId, meetingParams.provider);
 

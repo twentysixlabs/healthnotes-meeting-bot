@@ -41,7 +41,7 @@ const joinZoom = async (req: Request, res: Response) => {
   }
 
   // Create correlation ID and logger
-  const correlationId = createCorrelationId({ teamId, userId, botId, eventId, url });
+  const correlationId = createCorrelationId({ teamId, userId, botId, eventId, url, webhookUrl });
   const logger = loggerFactory(correlationId, 'zoom');
 
   try {

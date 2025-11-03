@@ -56,13 +56,15 @@ export const createCorrelationId = ({
   eventId,
   botId,
   url,
-  teamId
+  teamId,
+  webhookUrl
 }: {
   userId: string,
   eventId: string | undefined,
   botId: string | undefined,
   url: string,
   teamId: string
+  webhookUrl?: string,
 }): string => {
   try {
     const entityId = botId ?? eventId;
@@ -75,6 +77,7 @@ export const createCorrelationId = ({
       botId,
       url,
       teamId,
+      webhookUrl,
       method: 'v5'
     });
     return id;
