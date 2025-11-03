@@ -65,6 +65,7 @@ export async function uploadMultipartS3(
     });
 
     await upload.done();
+    
     logger.info(`Upload of ${key} complete.`);
     return true;
   } catch (err) {

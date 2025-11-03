@@ -10,6 +10,7 @@ import { JoinParams } from '../bots/AbstractMeetBot';
 import { MicrosoftTeamsBot } from '../bots/MicrosoftTeamsBot';
 import { ZoomBot } from '../bots/ZoomBot';
 import config from '../config';
+import { updateSessionMeetingBot } from '../services/convexService';
 
 export class RedisConsumerService {
   private _isRunning: boolean = false;
@@ -176,6 +177,23 @@ export class RedisConsumerService {
             break;
           default:
             throw new Error(`Unsupported provider: ${meetingParams.provider}`);
+        }
+
+        // Update session meeting bot status via Convex
+        if (meetingParams.botId) {
+          try {
+            await updateSessionMeetingBot({
+              status: 'joined',
+              botId: meetingParams.botId,
+              eventId: meetingParams.eventId,
+            }, logger);
+          } catch (error) {
+            logger.warn('Failed to update session meeting bot, but meeting join was successful', {
+              botId: meetingParams.botId,
+              eventId: meetingParams.eventId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
         
       }, logger);

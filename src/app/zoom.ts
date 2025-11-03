@@ -8,6 +8,7 @@ import { getRecordingNamePrefix } from '../util/recordingName';
 import { encodeFileNameSafebase64 } from '../util/strings';
 import { MeetingJoinParams } from './common';
 import { globalJobStore } from '../lib/globalJobStore';
+import { updateSessionMeetingBot } from '../services/convexService';
 
 const router = express.Router();
 
@@ -67,6 +68,23 @@ const joinZoom = async (req: Request, res: Response) => {
       await bot.join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader });
       
       logger.info('Joined Zoom meeting successfully.', userId, teamId);
+
+      // Update session meeting bot status via Convex
+      if (botId) {
+        try {
+          await updateSessionMeetingBot({
+            status: 'joined',
+            botId,
+            eventId,
+          }, logger);
+        } catch (error) {
+          logger.warn('Failed to update session meeting bot, but meeting join was successful', {
+            botId,
+            eventId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     }, logger);
 
     if (!jobResult.accepted) {
