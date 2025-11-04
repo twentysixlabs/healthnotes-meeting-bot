@@ -13,6 +13,7 @@ import { uploadDebugImage } from '../services/bugService';
 import { Logger } from 'winston';
 import { handleWaitingAtLobbyError } from './MeetBotBase';
 import { ZOOM_REQUEST_DENIED } from '../constants';
+import { notifyMeetingJoined } from '../services/webhookService';
 
 class BotBase extends AbstractMeetBot {
   protected page: Page;
@@ -55,7 +56,7 @@ export class ZoomBot extends BotBase {
     
     try {
       const pushState = (st: BotStatus) => _state.push(st);
-      await this.joinMeeting({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, pushState, uploader });
+      await this.joinMeeting({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, pushState, uploader, webhookUrl });
       await patchBotStatus({ botId, eventId, provider: 'zoom', status: _state, token: bearerToken }, this._logger);
 
       // Finish the upload from the temp video
@@ -75,7 +76,7 @@ export class ZoomBot extends BotBase {
   }
 
   private async joinMeeting({ pushState, ...params }: JoinParams & { pushState(state: BotStatus): void }): Promise<void> {
-    const { url, name } = params;
+    const { url, name, botId, eventId, webhookUrl } = params;
     this._logger.info('Launching browser for Zoom...', { userId: params.userId });
     
     this.page = await createBrowserContext(url, this._correlationId);
@@ -461,6 +462,28 @@ export class ZoomBot extends BotBase {
     }
 
     pushState('joined');
+
+    // Notify webhook of successful meeting join
+    if (botId && webhookUrl) {
+      try {
+        await notifyMeetingJoined(webhookUrl, {
+          sessionMeetingBotId: botId,
+          correlationId: this._correlationId,
+          botId: botId,
+          eventId: eventId,
+          provider: 'zoom',
+        }, this._logger);
+      } catch (error) {
+        this._logger.warn('Failed to notify webhook of meeting join, but meeting join was successful', {
+          webhookUrl: webhookUrl,
+          sessionMeetingBotId: botId,
+          correlationId: this._correlationId,
+          botId: botId,
+          eventId: eventId,
+          error: error.message,
+        });
+      }
+    }
 
     // Recording the meeting page
     this._logger.info('Begin recording...');

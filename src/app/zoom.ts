@@ -8,7 +8,6 @@ import { getRecordingNamePrefix } from '../util/recordingName';
 import { encodeFileNameSafebase64 } from '../util/strings';
 import { MeetingJoinParams } from './common';
 import { globalJobStore } from '../lib/globalJobStore';
-import { notifyMeetingJoined } from '../services/webhookService';
 
 const router = express.Router();
 
@@ -69,29 +68,6 @@ const joinZoom = async (req: Request, res: Response) => {
       await bot.join({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, webhookUrl });
       
       logger.info('Joined Zoom meeting successfully.', userId, teamId);
-
-      // Notify webhook of successful meeting join
-      if (botId && webhookUrl) {
-        try {
-          await notifyMeetingJoined(webhookUrl, {
-            sessionMeetingBotId: botId,
-            correlationId,
-            botId,
-            eventId,
-            provider: 'zoom',
-          }, logger);
-        } catch (error) {
-          logger.warn('Failed to notify webhook of meeting join, but meeting join was successful', {
-            webhookUrl,
-            sessionMeetingBotId: botId,
-            correlationId,
-            botId,
-            eventId,
-            provider: 'zoom',
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
     }, logger);
 
     if (!jobResult.accepted) {

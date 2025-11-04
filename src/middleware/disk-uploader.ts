@@ -42,11 +42,17 @@ function isNoSuchUploadError(err: any, userId: string, logger: Logger): boolean 
 }
 
 export interface IUploader {
-  uploadRecordingToRemoteStorage(options?: { forceUpload?: boolean }): Promise<boolean>;
+  uploadRecordingToRemoteStorage(options?: { forceUpload?: boolean }): Promise<UploadResult>;
   saveDataToTempFile(data: Buffer): Promise<boolean>;
   setWebhookUrl(webhookUrl: string): void;
   setProvider(provider: 'google' | 'microsoft' | 'zoom'): void;
   setEventId(eventId?: string): void;
+}
+
+type UploadResult = {
+  success: boolean;
+  key?: string;
+  attempt?: number;
 }
 
 // Save to disk and upload in one session
@@ -440,7 +446,7 @@ class DiskUploader implements IUploader {
     }
   }
 
-  private async uploadRecordingToScreenApp(): Promise<boolean> {
+  private async uploadRecordingToScreenApp(): Promise<UploadResult> {
     this._logger.info('Uploading recording to screenapp...');
     let attempt = 0;
     let success = false;
@@ -464,10 +470,13 @@ class DiskUploader implements IUploader {
       }
     } while (!success);
 
-    return success;
+    return {
+      success,
+      attempt
+    }
   }
 
-  private async uploadRecordingToS3CompatibleStorage(): Promise<boolean> {
+  private async uploadRecordingToS3CompatibleStorage(): Promise<UploadResult> {
     this._logger.info('Uploading recording to S3 compatible storage...');
     const filePath = DiskUploader.getFilePath(this._userId, this._tempFileId, this.fileExtension);
     const chunkSize = this.UPLOAD_CHUNK_SIZE;
@@ -500,7 +509,11 @@ class DiskUploader implements IUploader {
         }
 
         this._logger.info('S3 compatible storage upload success.');
-        return true;
+        return {
+          key,
+          success: true,
+          attempt
+        }
       } catch (err) {
         if (attempt >= maxAttempts) {
           this._logger.error(`Permanently failed to upload recording to S3 compatible storage after ${maxAttempts} attempts`, err);
@@ -513,7 +526,9 @@ class DiskUploader implements IUploader {
       }
     }
 
-    return false;
+    return {
+      success: false,
+    }
   }
 
   public async uploadRecordingToRemoteStorage(options?: { forceUpload?: boolean }) {
@@ -534,7 +549,9 @@ class DiskUploader implements IUploader {
         throw new Error(`Unable to finalise the temp recording file: ${this._userId} ${this._botId}`);
       }
 
-      let uploadResult = false;
+      let uploadResult: UploadResult = {
+        success: false,
+      };
       // Upload recording to configured storage
       if (config.uploaderType === 'screenapp') {
         uploadResult = await this.uploadRecordingToScreenApp();
@@ -549,13 +566,15 @@ class DiskUploader implements IUploader {
 
       // Notify webhook of upload completion if webhook URL is set
       if (uploadResult && this.webhookUrl && this._botId) {
-        await this.notifyUploadCompletion();
+        await this.notifyUploadCompletion(uploadResult);
       }
 
       return uploadResult;
     } catch (err) {
       this._logger.info('Unable to upload recording to server...', { error: err, userId: this._userId, teamId: this._teamId });
-      return false;
+      return {
+        success: false,
+      };
     }
   }
 
@@ -571,7 +590,7 @@ class DiskUploader implements IUploader {
     this.eventId = eventId;
   }
 
-  private async notifyUploadCompletion(): Promise<void> {
+  private async notifyUploadCompletion(uploadResult: UploadResult): Promise<void> {
     if (!this.webhookUrl || !this._botId) {
       return;
     }
@@ -580,30 +599,25 @@ class DiskUploader implements IUploader {
       // Import webhook service dynamically to avoid circular dependency
       const { notifyMeetingCompleted } = await import('../services/webhookService');
       
-      // For S3 uploads, construct the S3 URL
-      let uploadUrl = '';
-      if (config.uploaderType === 's3') {
-        const s3Config = {
-          endpoint: process.env.S3_ENDPOINT || '',
-          bucket: process.env.S3_BUCKET_NAME || '',
-          region: process.env.S3_REGION || '',
-        };
-        
-        const key = `${this._namePrefix}_${this._tempFileId}${this.fileExtension}`;
-        if (s3Config.endpoint && s3Config.bucket) {
-          uploadUrl = `${s3Config.endpoint}/${s3Config.bucket}/${key}`;
-        } else {
-          uploadUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
-        }
+      if (uploadResult.success && uploadResult.key) {
+        await notifyMeetingCompleted(this.webhookUrl, {
+          sessionMeetingBotId: this._botId,
+          uploadUrl: uploadResult.key,
+          botId: this._botId,
+          eventId: this.eventId,
+          provider: this.provider,
+        }, this._logger);
+        return 
       }
 
-      await notifyMeetingCompleted(this.webhookUrl, {
-        sessionMeetingBotId: this._botId,
-        uploadUrl,
+      this._logger.warn('Failed to notify webhook of upload completion', {
+        webhookUrl: this.webhookUrl,
         botId: this._botId,
         eventId: this.eventId,
         provider: this.provider,
-      }, this._logger);
+        uploadResult,
+        error: 'Upload result is not successful or key is not provided',
+      });
     } catch (error) {
       this._logger.warn('Failed to notify webhook of upload completion', {
         webhookUrl: this.webhookUrl,

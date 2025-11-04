@@ -13,6 +13,7 @@ import { retryActionWithWait } from '../util/resilience';
 import { uploadDebugImage } from '../services/bugService';
 import createBrowserContext from '../lib/chromium';
 import { GOOGLE_LOBBY_MODE_HOST_TEXT, GOOGLE_REQUEST_DENIED, GOOGLE_REQUEST_TIMEOUT } from '../constants';
+import { notifyMeetingJoined } from '../services/webhookService';
 import { vp9MimeType, webmMimeType } from '../lib/recording';
 
 export class GoogleMeetBot extends MeetBotBase {
@@ -44,7 +45,7 @@ export class GoogleMeetBot extends MeetBotBase {
 
     try {
       const pushState = (st: BotStatus) => _state.push(st);
-      await this.joinMeeting({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, pushState });
+      await this.joinMeeting({ url, name, bearerToken, teamId, timezone, userId, eventId, botId, uploader, pushState, webhookUrl });
 
       // Finish the upload from the temp video
       const uploadResult = await handleUpload();
@@ -72,7 +73,7 @@ export class GoogleMeetBot extends MeetBotBase {
     }
   }
 
-  private async joinMeeting({ url, name, teamId, userId, eventId, botId, pushState, uploader }: JoinParams & { pushState(state: BotStatus): void }): Promise<void> {
+  private async joinMeeting({ url, name, teamId, userId, eventId, botId, pushState, uploader, webhookUrl }: JoinParams & { pushState(state: BotStatus): void }): Promise<void> {
     this._logger.info('Launching browser...');
 
     this.page = await createBrowserContext(url, this._correlationId);
@@ -321,6 +322,28 @@ export class GoogleMeetBot extends MeetBotBase {
     }
 
     pushState('joined');
+
+    // Notify webhook of successful meeting join
+    if (botId && webhookUrl) {
+      try {
+        await notifyMeetingJoined(webhookUrl, {
+          sessionMeetingBotId: botId,
+          correlationId: this._correlationId,
+          botId: botId,
+          eventId: eventId,
+          provider: 'google',
+        }, this._logger);
+      } catch (error) {
+        this._logger.warn('Failed to notify webhook of meeting join, but meeting join was successful', {
+          webhookUrl: webhookUrl,
+          sessionMeetingBotId: botId,
+          correlationId: this._correlationId,
+          botId: botId,
+          eventId: eventId,
+          error: error.message,
+        });
+      }
+    }
 
     try {
       this._logger.info('Waiting for the "Got it" button...');
