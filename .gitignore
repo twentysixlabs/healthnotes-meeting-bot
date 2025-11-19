@@ -7,7 +7,7 @@ dist/
 assets/videos
 *.y4m
 __pycache__/
-.env
 gcp-key
 assets/screenshots
 /data
+config.bat
